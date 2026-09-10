@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+*.pem
+*.key
+node_modules/
+work/
+private/
+*个人简历*
+*导入.json
+*.zip

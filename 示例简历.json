@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "profile": {
+    "personal": {
+      "name": "测试同学",
+      "phone": "13800000000",
+      "email": "demo@example.com",
+      "gender": "女",
+      "birthday": "2003-08-16",
+      "nationality": "中国"
+    },
+    "education": [
+      {
+        "school": "示例大学",
+        "major": "计算机科学与技术",
+        "degree": "本科",
+        "start": "2022-09",
+        "end": "2026-06"
+      }
+    ],
+    "project": [
+      {
+        "name": "校园信息平台",
+        "role": "前端开发",
+        "start": "2024-03",
+        "end": "2024-07",
+        "url": "https://example.com",
+        "description": "实现信息检索、发布与管理功能。"
+      },
+      {
+        "name": "课程数据分析",
+        "role": "数据分析",
+        "start": "2025-02",
+        "end": "2025-05",
+        "description": "清洗课程数据，完成可视化分析与报告。"
+      }
+    ]
+  }
+}
