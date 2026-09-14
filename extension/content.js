@@ -39,13 +39,15 @@ function sectionOf(el){
  }return null;
 }
 function chooseEntry(d){if(d.section==='declaration')return null;if(d.section==='employment'){const work=entries.filter(e=>e.section==='work'),offset=work.length?Math.max(...work.map(e=>e.index))+1:0;const combined=[...work,...entries.filter(e=>e.section==='internship').map(e=>({...e,index:e.index+offset}))].map(e=>({...e,section:'employment'}));return E.choose(d,combined);}return E.choose(d,entries);}
-function scan(){
+function collectDescriptors(){
  const all=roots().flatMap(r=>[...r.querySelectorAll('input,textarea,select,[contenteditable="true"],.phoenix-select,.phoenix-radio-group')]).filter(el=>editable(el)&&visible(el)&&!el.closest('[data-autumn-ignore]')&&!(el.tagName==='INPUT'&&el.closest('.phoenix-select'))&&!el.closest('.phoenix-calendar,.phoenix-selectList,.constant-main-selector-container'));
- const seen=new Map();descriptors=all.map((el,i)=>{let ls=labels(el);const section=sectionOf(el);if(ls.some(l=>/^(?:项目)?起止(?:时间|日期)$/.test(l.replace(/[:：*\s]/g,'')))){let parent=el.parentElement;for(let depth=0;parent&&depth<3;depth++,parent=parent.parentElement){const pair=[...parent.querySelectorAll('input')].filter(E.safeEditable);if(pair.length===2&&pair.includes(el)){ls=[pair.indexOf(el)===0?'开始时间':'结束时间',...ls];break;}}}const signature=section+'|'+E.norm(ls[0]||'');let index=null;
+ const seen=new Map();return all.map((el,i)=>{let ls=labels(el);const section=sectionOf(el);if(ls.some(l=>/^(?:项目)?起止(?:时间|日期)$/.test(l.replace(/[:：*\s]/g,'')))){let parent=el.parentElement;for(let depth=0;parent&&depth<3;depth++,parent=parent.parentElement){const pair=[...parent.querySelectorAll('input')].filter(E.safeEditable);if(pair.length===2&&pair.includes(el)){ls=[pair.indexOf(el)===0?'开始时间':'结束时间',...ls];break;}}}const signature=section+'|'+E.norm(ls[0]||'');let index=null;
  if(section&&(section==='employment'||S.sections.find(s=>s.key===section)?.repeat)){index=seen.get(signature)||0;seen.set(signature,index+1);}
- const d={id:'f'+i,el,labels:ls,section,index,status:String(readValue(el)||'').trim()?'已有内容':'待匹配'};
+ const d={id:'f'+i,el,root:el.getRootNode(),labels:ls,section,index,status:String(readValue(el)||'').trim()?'已有内容':'待匹配'};
  if(d.status==='待匹配'){d.entry=chooseEntry(d);if(d.entry)d.status='可填写';}return d;});
- suggestions=[];$('#suggestions').replaceChildren();renderReport();return descriptors;
+}
+function scan(){
+ descriptors=collectDescriptors();suggestions=[];$('#suggestions').replaceChildren();renderReport();return descriptors;
 }
 function renderReport(){const box=$('#report');box.replaceChildren();for(const d of descriptors){const row=node('div','', 'report-row');row.append(node('strong',d.labels[0]||'未命名输入框'),node('span',`${d.section?(d.section==='employment'?'工作 / 实习经历':S.sections.find(s=>s.key===d.section)?.label||'需手动确认')+' · ':''}${d.status}${d.entry?' → '+d.entry.label:''}`));const jump=node('button','定位');jump.onclick=()=>{if(d.el.isConnected){d.el.scrollIntoView({block:'center',behavior:'smooth'});d.el.focus();}};row.append(document.createTextNode(' '),jump);box.append(row);}$('#pending').textContent=descriptors.filter(d=>!['已填写','已有内容'].includes(d.status)).length;}
 async function refresh(){try{const r=await chrome.runtime.sendMessage({type:'PROFILE'});if(!r.ok)throw Error(r.error);entries=S.flatten(S.validateProfile(r.profile));$('#profile-info').textContent=`资料库已准备 ${entries.length} 项 · 只填写空白内容`;renderLibrary();if(!entries.length)say('还没有简历资料，请先点击「管理简历」录入并保存。');}catch(e){say('读取失败：'+e.message);}}
@@ -60,16 +62,41 @@ async function onPageClick(event){
  if(String(readValue(el)||'').trim()&&!confirm(`此输入框已有内容，是否替换为「${entry.label}」？`))return;
  const before=readValue(el);clearSelection();running=true;let res;try{res=await writeValue(el,entry.value);}finally{running=false;}if(res.ok){history.push({el,before,after:res.value});clearSelection();say(`已填入「${entry.label}」，请核对网页。`);}else say(res.reason+'。可以选中资料后使用复制。');
 }
+// A replaced personal field can be recovered only within its original DOM root.
+// Repeated experience rows are not rebound by position: their order may have changed.
+function resolveField(d){
+ if(d.el.isConnected&&editable(d.el)&&visible(d.el))return d.el;
+ if(d.index!==null)return null;
+ const matches=collectDescriptors().filter(n=>n.root===d.root&&n.section===d.section&&n.index===null&&n.labels.some(l=>d.labels.some(old=>E.norm(old)===E.norm(l)))&&chooseEntry(n)?.id===d.entry?.id);
+ if(matches.length!==1)return null;
+ d.el=matches[0].el;return d.el;
+}
+async function fillField(d){
+ for(let attempt=0;attempt<2;attempt++){
+  const el=resolveField(d);if(!el){d.status='页面已更新，无法唯一定位，请重新扫描';return null;}
+  if(String(readValue(el)||'').trim()){d.status='已有内容';return null;}
+  const before=readValue(el),res=await writeValue(el,d.entry.value);
+  await new Promise(r=>setTimeout(r,180));
+  const current=resolveField(d);
+  if(res.ok&&current&&String(readValue(current))===res.value){d.status='已填写';return {el:current,before,after:res.value,d};}
+  // Retry once only when the site replaced the control with a uniquely identified blank.
+  if(!cancel&&attempt===0&&current&&current!==el&&!String(readValue(current)||'').trim())continue;
+  d.status=!current?'页面已更新，无法确认填写结果':res.ok?'页面未保留内容，请辅助填写':res.reason;return null;
+ }
+}
 async function run(){
  if(running)return;running=true;$('#fill').disabled=true;await refresh();if(!entries.length){running=false;$('#fill').disabled=false;return;}scan();const candidates=descriptors.filter(d=>d.entry&&d.status==='可填写');if(!candidates.length){running=false;$('#fill').disabled=false;say('没有可唯一匹配的空白字段。可使用辅助填写，或查看填写结果。');return;}
  running=true;cancel=false;history=[];$('#fill').disabled=true;$('#scan').disabled=true;$('#undo').disabled=true;$('#ai').disabled=true;$('#stop').disabled=false;let done=0,filled=0;$('#filled').textContent='0';
- try{for(const d of candidates){if(cancel)break;if(!d.el.isConnected){d.status='页面已更新，请重新扫描';continue;}if(String(readValue(d.el)||'').trim()){d.status='已有内容';continue;}
- const before=readValue(d.el),res=await writeValue(d.el,d.entry.value);await new Promise(r=>setTimeout(r,90));
- if(res.ok&&String(readValue(d.el))===res.value){d.status='已填写';history.push({el:d.el,before,after:res.value});filled++;}else d.status=res.ok?'页面未保留内容，请辅助填写':res.reason;
+ try{for(const d of candidates){if(cancel)break;
+ const item=await fillField(d);if(item){history.push(item);filled++;}
  done++;$('#filled').textContent=filled;$('#progress').value=Math.round(done/candidates.length*100);say(`正在填写 ${done} / ${candidates.length}：${d.labels[0]||'字段'}`);}
+ // Later fields can cause the site to regenerate or clear an earlier field.
+ for(const item of history){const current=resolveField(item.d);if(current&&String(readValue(current))===item.after)item.el=current;else{item.d.status='页面后续更新，内容未保留，请重新扫描';filled--;}}
+ history=history.filter(item=>item.d.status==='已填写');$('#filled').textContent=filled;
  hasRun=true;renderReport();say(`${cancel?'已停止':'本轮完成'}：填入 ${filled} 项。${$('#pending').textContent} 项待处理；检查后可继续补填。`);
  }catch(e){say('填写中断：'+e.message);}finally{running=false;$('#fill').disabled=false;$('#scan').disabled=false;$('#undo').disabled=false;$('#ai').disabled=false;$('#stop').disabled=true;$('#fill').textContent='继续填写空白项';}
 }
+
 function setTab(name){$('#library-view').classList.toggle('hidden',name!=='library');$('#report-view').classList.toggle('hidden',name!=='report');$('#tab-library').classList.toggle('active',name==='library');$('#tab-report').classList.toggle('active',name==='report');}
 $('#tab-library').onclick=()=>setTab('library');$('#tab-report').onclick=()=>setTab('report');
 for(const s of S.sections){const o=node('option',s.label);o.value=s.key;$('#category').append(o);}

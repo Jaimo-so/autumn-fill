@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "秋填 · 个人网申助手",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "一次整理简历，一键填写网申。支持继续填写、字段搜索与点选辅助填写。",
   "permissions": [
     "activeTab",

@@ -6,9 +6,11 @@ function describe(el){const item=el.closest('.form-item');if(!item)return null;c
  for(let i=0;p&&i<22;i++,p=p.parentElement){const direct=[...p.children].filter(n=>!n.contains(item)&&!n.querySelector('.form-item'));for(const child of direct){const text=clean(child.textContent);if(Object.hasOwn(sectionNames,text)){section=sectionNames[text];break;}}if(section)break;}
  return {labels:label?[label]:[],section};
 }
-const isControl=el=>el?.matches?.('.phoenix-select,.phoenix-radio-group');
+function isIdentityInput(el){return el?.tagName==='INPUT'&&E.safeEditable(el)&&['证件号码','证件号','身份证','身份证号','身份证号码'].includes(E.norm(describe(el)?.labels[0]));}
+const isControl=el=>isIdentityInput(el)||el?.matches?.('.phoenix-select,.phoenix-radio-group');
 const shown=el=>!!el&&el.isConnected&&el.getBoundingClientRect().width>0&&el.ownerDocument.defaultView.getComputedStyle(el).visibility!=='hidden';
 function read(el){
+ if(el.tagName==='INPUT')return E.read(el);
  if(el.matches('.phoenix-radio-group')){const checked=[...el.querySelectorAll('.phoenix-radio')].find(n=>/--checked\b/.test(n.className)||n.getAttribute('aria-checked')==='true');return checked?.querySelector('.phoenix-radio__radio-text')?.textContent.trim()||'';}
  const content=el.querySelector('.phoenix-select__content');if(!content)return '';const copy=content.cloneNode(true);copy.querySelectorAll('.phoenix-select__inputWrapper,input').forEach(n=>n.remove());return copy.textContent.trim();
 }
@@ -18,6 +20,7 @@ function exact(value,option,label){const a=E.norm(value),b=E.norm(option);if(a==
  if(label==='学历'){const aliases={'硕士':'硕士研究生','博士':'博士研究生','专科':'大专'};return aliases[value]===option;}return false;
 }
 async function write(el,value){
+ if(isIdentityInput(el)){el.focus();if(!el.isConnected)return {ok:false,reason:'页面已更新，请重新扫描'};const result=E.write(el,value);el.blur();return result;}
  if(!editable(el))return {ok:false,reason:'控件不可编辑'};
  const v=String(value),doc=el.ownerDocument,label=describe(el)?.labels[0]||'';
  if(el.matches('.phoenix-radio-group')){
