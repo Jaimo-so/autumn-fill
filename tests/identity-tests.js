@@ -36,7 +36,7 @@ document.querySelector('#run').onclick=async()=>{
  const base=new URL(new URLSearchParams(location.search).get('source')||'../extension/',location.href).href;
  try{for(const [mode,name] of cases){
   const frame=document.createElement('iframe');document.querySelector('#fixture').replaceChildren(frame);
-  const html=`<section><div>个人基本信息*</div>${field('姓名','name')}${field('证件号码','number')}${field('手机号码','phone')}</section><section><div>家庭成员及重要社会关系*</div>${field('姓名','family')}</section><script>(${setup.toString()})(${JSON.stringify(mode)})<\/script>${['schema','engine','beisen','content'].map(n=>`<script src="${base}${n}.js"><\/script>`).join('')}`;
+  const html=`<section><div>个人基本信息*</div>${field('姓名','name')}${field('证件号码','number')}${field('手机号码','phone')}</section><section><div>家庭成员及重要社会关系*</div>${field('姓名','family')}</section><script>(${setup.toString()})(${JSON.stringify(mode)})<\/script>${['schema','engine','beisen','zhaopin','content'].map(n=>`<script src="${base}${n}.js?v=0.1.2-final"><\/script>`).join('')}`;
   frame.srcdoc=html;
   try{
    await wait(()=>frame.contentWindow.testPanel?.querySelector('#library button'));

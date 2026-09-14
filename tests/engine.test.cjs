@@ -23,4 +23,15 @@ const identity=S.flatten(S.validateProfile({personal:{idType:'身份证',idNumbe
 for(const label of ['证件号码','身份证','身份证号','身份证号码','证件号','居民身份证号码','公民身份号码','身份证件号码','请输入身份证号码'])test('身份证号码匹配：'+label,()=>assert.equal(E.choose({labels:[label],section:'personal'},identity)?.id,'personal.0.idNumber'));
 test('证件类型不混入身份证号码',()=>assert.equal(E.choose({labels:['证件类型'],section:'personal'},identity)?.id,'personal.0.idType'));
 test('家属证件不套用本人号码',()=>assert.equal(E.choose({labels:['证件号码'],section:'family'},identity),null));
+test('智联必填家庭关系标题',()=>assert.equal(E.sectionKey('家庭关系 必填',S.sections),'family'));
+test('标题必填标记和星号',()=>assert.equal(E.sectionKey('* 家庭关系（必填）',S.sections),'family'));
+test('亲属任职声明不归入家庭关系',()=>assert.equal(E.sectionKey('亲属在邮储银行体系任职情况',S.sections),null));
+const relatives=S.flatten(S.validateProfile({personal:{name:'本人'},family:[{name:'母亲资料',relation:'母亲',role:'母亲职务',age:'48'},{name:'父亲资料',relation:'父亲',role:'父亲职位',age:'50'}]}));
+test('姓名-父亲按关系匹配，不按数组序号',()=>assert.equal(E.choose({labels:['* 姓名-父亲'],section:'family',index:0},relatives)?.value,'父亲资料'));
+test('姓名-母亲按关系匹配',()=>assert.equal(E.choose({labels:['姓名-母亲'],section:'family',index:0},relatives)?.value,'母亲资料'));
+test('职位-父亲映射职务字段',()=>assert.equal(E.choose({labels:['职位-父亲'],section:'family'},relatives)?.value,'父亲职位'));
+test('年龄-母亲只使用保存年龄',()=>assert.equal(E.choose({labels:['年龄-母亲'],section:'family'},relatives)?.value,'48'));
+test('任职情况不根据工作单位推断',()=>assert.equal(E.choose({labels:['父亲是否为邮储银行体系内单位员工'],section:'family'},relatives),null));
+test('缺少父亲资料时不套用母亲',()=>assert.equal(E.choose({labels:['姓名-父亲'],section:'family'},relatives.filter(f=>f.index!==1)),null));
+test('两位父亲记录不猜测',()=>{const fields=[...relatives,...relatives.filter(f=>f.section==='family'&&f.index===1).map(f=>({...f,index:2,id:f.id.replace('.1.','.2.')}))];assert.equal(E.choose({labels:['姓名-父亲'],section:'family'},fields),null);});
 console.log(`${count} tests passed`);

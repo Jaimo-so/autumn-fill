@@ -1,9 +1,9 @@
 (() => {
 if(globalThis.__autumnFill){globalThis.__autumnFill.open();return;}
-const S=AutumnSchema,E=AutumnEngine,A=globalThis.AutumnBeisen;
-const readValue=el=>A?.isControl(el)?A.read(el):E.read(el);
-const writeValue=async(el,value)=>A?.isControl(el)?A.write(el,value):E.write(el,value);
-const editable=el=>A?.isControl(el)?A.editable(el):E.safeEditable(el);
+const S=AutumnSchema,E=AutumnEngine,A=globalThis.AutumnBeisen,Z=globalThis.AutumnZhaopin;
+const readValue=el=>Z?.isControl(el)?Z.read(el):A?.isControl(el)?A.read(el):E.read(el);
+const writeValue=async(el,value)=>Z?.isControl(el)?Z.write(el,value):A?.isControl(el)?A.write(el,value):E.write(el,value);
+const editable=el=>Z?.isControl(el)?Z.editable(el):A?.isControl(el)?A.editable(el):E.safeEditable(el);
 let entries=[],running=false,cancel=false,selected=null,descriptors=[],suggestions=[],history=[],hasRun=false;
 const host=document.createElement('div');host.id='autumn-fill-host';host.style.cssText='position:fixed;right:22px;top:90px;width:364px;max-width:calc(100vw - 24px);z-index:2147483647';
 const shadow=host.attachShadow({mode:'closed'});
@@ -21,7 +21,7 @@ function roots(root=document,all=[],seen=new Set()){
 }
 function labelText(label){const copy=label.cloneNode(true);copy.querySelectorAll('input,textarea,select,button').forEach(n=>n.remove());return copy.textContent;}
 function labels(el){
- const site=A?.describe(el);if(site?.labels.length)return site.labels;
+ const site=Z?.describe(el)||A?.describe(el);if(site?.labels.length)return site.labels;
  const out=[];if(el.labels)out.push(...[...el.labels].map(labelText));
  const root=el.getRootNode();for(const id of (el.getAttribute('aria-labelledby')||'').split(/\s+/))if(id)out.push(root.getElementById?.(id)?.textContent||'');
  out.push(el.getAttribute('aria-label'),el.placeholder);
@@ -29,11 +29,11 @@ function labels(el){
  out.push(el.name,el.id);return [...new Set(out.filter(x=>x&&x.trim()&&x.trim().length<100).map(x=>x.trim()))];
 }
 function sectionOf(el){
- const site=A?.describe(el);if(site?.section)return site.section;
- const find=text=>S.sections.find(s=>[s.label,...s.aliases].some(n=>E.norm(text).replace(/\d+$/,'')===E.norm(n)));
+ const site=Z?.describe(el)||A?.describe(el);if(site?.section)return site.section;
+ const find=text=>S.sections.find(s=>s.key===E.sectionKey(text,S.sections));
  let p=el.parentElement;for(let depth=0;p&&depth<9;depth++,p=p.parentElement){
   const title=p.getAttribute('data-section');if(title&&S.sections.some(s=>s.key===title))return title;
-  const heads=[...p.querySelectorAll('h1,h2,h3,h4,legend,[role=heading]')].filter(h=>!h.contains(el));const before=heads.filter(h=>h.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);
+  const heads=[...p.querySelectorAll('h1,h2,h3,h4,h5,h6,legend,[role=heading]')].filter(h=>!h.contains(el));const before=heads.filter(h=>h.compareDocumentPosition(el)&Node.DOCUMENT_POSITION_FOLLOWING);
   if(before.length){for(const h of before.reverse()){const section=find(h.textContent);if(section)return section.key;}}
   const prev=p.previousElementSibling;if(prev&&prev.textContent.length<45){const section=find(prev.textContent);if(section)return section.key;}
  }return null;
@@ -66,8 +66,9 @@ async function onPageClick(event){
 // Repeated experience rows are not rebound by position: their order may have changed.
 function resolveField(d){
  if(d.el.isConnected&&editable(d.el)&&visible(d.el))return d.el;
- if(d.index!==null)return null;
- const matches=collectDescriptors().filter(n=>n.root===d.root&&n.section===d.section&&n.index===null&&n.labels.some(l=>d.labels.some(old=>E.norm(old)===E.norm(l)))&&chooseEntry(n)?.id===d.entry?.id);
+ const namedFamily=d.section==='family'&&d.labels.some(label=>E.familyLabel(label));
+ if(d.index!==null&&!namedFamily)return null;
+ const matches=collectDescriptors().filter(n=>n.root===d.root&&n.section===d.section&&(n.index===null||namedFamily)&&n.labels.some(l=>d.labels.some(old=>E.norm(old)===E.norm(l)))&&chooseEntry(n)?.id===d.entry?.id);
  if(matches.length!==1)return null;
  d.el=matches[0].el;return d.el;
 }

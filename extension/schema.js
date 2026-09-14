@@ -26,7 +26,7 @@ alias('work','department',['所在部门']);add('internship',[f('department','�
 alias('award','description',['其他补充']);add('award',[f('issuer','颁奖单位'),f('role','担当角色')]);
 alias('publication','name',['文章名、书名']);alias('publication','journal',['刊物、出版社']);alias('publication','date',['日期']);alias('publication','description',['内容摘要']);add('publication',[f('role','担任角色')]);
 alias('language','score',['得分']);alias('project','role',['担当角色']);alias('project','description',['主要工作内容']);add('project',[f('level','项目级别')]);
-alias('family','relation',['称谓']);alias('family','role',['所属职务']);add('family',[f('birthday','出生日期','','date')]);alias('skill','name',['技能类别']);
+alias('family','relation',['称谓']);alias('family','role',['所属职务','职位']);add('family',[f('birthday','出生日期','','date')]);alias('skill','name',['技能类别']);
 sections.push({key:'certificate',label:'专业资格',aliases:['资格证书'],repeat:true,fields:[f('hasCertificate','具有资格证书'),f('name','证书名称'),f('date','获得时间','','date')]});
 sections.push({key:'other',label:'其他信息',aliases:[],fields:[f('hobbies','爱好及特长','','textarea'),f('strengths','优势与不足','','textarea'),f('summary','自我评价及求职目标','','textarea'),f('extra','其他','','textarea')]});
 
@@ -34,7 +34,7 @@ sections.push({key:'other',label:'其他信息',aliases:[],fields:[f('hobbies','
 add('personal',[f('wechat','微信号'),f('qq','QQ号'),f('age','年龄'),f('idType','证件类型'),f('highestDegree','最高学历'),f('graduateSchool','毕业院校'),f('graduateMajor','毕业专业'),f('studyMode','学习形式'),f('graduationDate','毕业时间','','date'),f('englishLevel','英语等级'),f('examScore','高考分数'),f('examSubjects','高考科目'),f('workYears','工作年限'),f('emergencyRelation','紧急联系人关系'),f('freshGraduate','是否应届生'),f('recommendedGraduate','是否保研'),f('studiedAbroad','是否有留学经历'),f('colorWeakness','是否色弱'),f('hukouType','户口性质'),f('hukouLocation','户口所在地'),f('archiveLocation','档案所在地'),f('advantages','个人优势','','textarea'),f('hobbies','兴趣爱好','','textarea')]);
 add('education',[f('studentId','学号'),f('faculty','院系'),f('city','学校城市'),f('jointTraining','是否联合培养'),f('status','学历状态'),f('duration','学制（年）'),f('period','起止时间'),f('schoolType','学校类型'),f('studyMode','教育方式'),f('admissionType','招生类别'),f('failedCourses','挂科数'),f('overseas','是否海外学校')]);
 add('internship',[f('period','起止时间'),f('city','实习地址'),f('industry','所属行业'),f('referenceName','证明人姓名'),f('referencePhone','证明人联系方式','','tel'),f('referenceRole','证明人职位')]);
-add('family',[f('gender','性别'),f('education','教育程度'),f('ethnicity','民族'),f('politics','政治面貌'),f('address','联系地址')]);
+add('family',[f('age','年龄'),f('gender','性别'),f('education','教育程度'),f('ethnicity','民族'),f('politics','政治面貌'),f('address','联系地址')]);
 alias('personal','emergencyContact',['紧急联系人姓名']);alias('personal','emergencyPhone',['紧急联系电话']);alias('personal','origin',['生源地']);
 sections.find(s=>s.key==='personal').fields.find(f=>f.key==='hometown').aliases=sections.find(s=>s.key==='personal').fields.find(f=>f.key==='hometown').aliases.filter(v=>v!=='生源地');
 alias('education','gpa',['成绩绩点']);alias('internship','employmentType',['用工性质']);
